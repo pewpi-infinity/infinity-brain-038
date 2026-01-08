@@ -1,0 +1,28 @@
+{
+  "name": "infinity-brain-038",
+  "version": "1.0.0",
+  "description": "Infinity Brain Node 038 - Part of the pewpi-infinity distributed brain network",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "infinity",
+    "brain",
+    "distributed",
+    "pewpi",
+    "node-038"
+  ],
+  "author": "pewpi-infinity",
+  "license": "MIT",
+  "dependencies": {
+    "dexie": "^3.2.4",
+    "crypto-js": "^4.2.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pewpi-infinity/infinity-brain-038.git"
+  }
+}
