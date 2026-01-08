@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pewpi-Shared Demo</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+    .status {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .module-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .module-card h3 {
+      margin-top: 0;
+      color: #667eea;
+    }
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #5568d3;
+    }
+    .success { color: #4CAF50; }
+    .error { color: #F44336; }
+    .warning { color: #FF9800; }
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🧱 Pewpi-Shared Integration Demo</h1>
+    <p>Testing the unified auth + wallet + token library</p>
+  </div>
+
+  <div class="status">
+    <h2>System Status</h2>
+    <div id="status-content">Initializing...</div>
+  </div>
+
+  <div class="module-grid">
+    <div class="module-card">
+      <h3>🔐 Token Service</h3>
+      <button onclick="testTokenService()">Generate Token</button>
+      <button onclick="validateToken()">Validate Token</button>
+      <pre id="token-output">No tests run yet</pre>
+    </div>
+
+    <div class="module-card">
+      <h3>👤 Auth Service</h3>
+      <button onclick="testAuth()">Login</button>
+      <button onclick="testLogout()">Logout</button>
+      <button onclick="checkAuth()">Check Status</button>
+      <pre id="auth-output">No tests run yet</pre>
+    </div>
+
+    <div class="module-card">
+      <h3>💰 Wallet Service</h3>
+      <button onclick="testWallet()">Create Wallet</button>
+      <button onclick="testBalance()">Update Balance</button>
+      <button onclick="testTransaction()">Add Transaction</button>
+      <pre id="wallet-output">No tests run yet</pre>
+    </div>
+
+    <div class="module-card">
+      <h3>🔌 Integration Listener</h3>
+      <button onclick="testListener()">Register Listener</button>
+      <button onclick="emitEvent()">Emit Event</button>
+      <pre id="listener-output">No tests run yet</pre>
+    </div>
+
+    <div class="module-card">
+      <h3>🤖 Machine Adapter</h3>
+      <button onclick="testMachine()">Create Machine</button>
+      <button onclick="sendMachineEvent()">Send Event</button>
+      <pre id="machine-output">No tests run yet</pre>
+    </div>
+
+    <div class="module-card">
+      <h3>🎨 UI Components</h3>
+      <button onclick="testNotification()">Show Notification</button>
+      <button onclick="testModal()">Show Modal</button>
+      <pre id="ui-output">Click buttons to test</pre>
+    </div>
+  </div>
+
+  <!-- Load pewpi-shared modules -->
+  <script src="src/pewpi-shared/token-service.js"></script>
+  <script src="src/pewpi-shared/auth-service.js"></script>
+  <script src="src/pewpi-shared/wallet-unified.js"></script>
+  <script src="src/pewpi-shared/integration-listener.js"></script>
+  <script src="src/pewpi-shared/machines/adapter.js"></script>
+  <script src="src/pewpi-shared/ui-notification.js"></script>
+  <script src="src/pewpi-shared/ui-modal.js"></script>
+  <script src="src/pewpi-shared/index-shim.js"></script>
+
+  <script>
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', function() {
+      PewpiShared.initialize({
+        storage: localStorage,
+        notification: { position: 'top-right', maxNotifications: 5 }
+      });
+
+      // Display status
+      displayStatus();
+    });
+
+    function displayStatus() {
+      const status = PewpiShared.getStatus();
+      const statusHtml = `
+        <p><strong>Version:</strong> ${status.version}</p>
+        <p><strong>Initialized:</strong> <span class="${status.initialized ? 'success' : 'error'}">${status.initialized ? '✓ Yes' : '✗ No'}</span></p>
+        <p><strong>Loaded Modules:</strong> ${status.modules.length}/7</p>
+        <ul>${status.modules.map(m => '<li class="success">✓ ' + m + '</li>').join('')}</ul>
+        ${status.errors.length > 0 ? '<p class="error"><strong>Errors:</strong></p><ul>' + status.errors.map(e => '<li>' + e.module + ': ' + e.error + '</li>').join('') + '</ul>' : '<p class="success">No errors</p>'}
+      `;
+      document.getElementById('status-content').innerHTML = statusHtml;
+    }
+
+    let lastToken = null;
+
+    function testTokenService() {
+      const tokenService = PewpiShared.getModule('TokenService');
+      if (!tokenService) {
+        document.getElementById('token-output').textContent = 'TokenService not loaded';
+        return;
+      }
+
+      lastToken = tokenService.generateToken('demo', { user: 'test-user' }, 3600000);
+      document.getElementById('token-output').textContent = 
+        'Token Generated:\n' + JSON.stringify(lastToken, null, 2);
+    }
+
+    function validateToken() {
+      const tokenService = PewpiShared.getModule('TokenService');
+      if (!tokenService || !lastToken) {
+        document.getElementById('token-output').textContent = 'Generate a token first';
+        return;
+      }
+
+      const isValid = tokenService.validateToken(lastToken.id);
+      document.getElementById('token-output').textContent = 
+        'Token Validation:\n' + (isValid ? '✓ Valid' : '✗ Invalid');
+    }
+
+    async function testAuth() {
+      const authService = PewpiShared.getModule('AuthService');
+      if (!authService) {
+        document.getElementById('auth-output').textContent = 'AuthService not loaded';
+        return;
+      }
+
+      const result = await authService.authenticate({
+        username: 'demo-user@pewpi.io'
+      });
+
+      document.getElementById('auth-output').textContent = 
+        'Authentication Result:\n' + JSON.stringify(result, null, 2);
+    }
+
+    function testLogout() {
+      const authService = PewpiShared.getModule('AuthService');
+      if (!authService) return;
+
+      authService.logout();
+      document.getElementById('auth-output').textContent = 'Logged out';
+    }
+
+    function checkAuth() {
+      const authService = PewpiShared.getModule('AuthService');
+      if (!authService) return;
+
+      const isAuth = authService.isAuthenticated();
+      const user = authService.getCurrentUser();
+      
+      document.getElementById('auth-output').textContent = 
+        'Auth Status:\n' + 
+        'Authenticated: ' + isAuth + '\n' +
+        'User: ' + JSON.stringify(user, null, 2);
+    }
+
+    let testWalletId = null;
+
+    function testWallet() {
+      const wallet = PewpiShared.getModule('WalletUnified');
+      if (!wallet) {
+        document.getElementById('wallet-output').textContent = 'WalletUnified not loaded';
+        return;
+      }
+
+      const newWallet = wallet.createWallet({
+        type: 'ethereum',
+        name: 'Test Wallet'
+      });
+
+      testWalletId = newWallet.id;
+      wallet.setActiveWallet(testWalletId);
+
+      document.getElementById('wallet-output').textContent = 
+        'Wallet Created:\n' + JSON.stringify(newWallet, null, 2);
+    }
+
+    function testBalance() {
+      const wallet = PewpiShared.getModule('WalletUnified');
+      if (!wallet || !testWalletId) {
+        document.getElementById('wallet-output').textContent = 'Create a wallet first';
+        return;
+      }
+
+      wallet.updateBalance(testWalletId, 10.5);
+      const w = wallet.getWallet(testWalletId);
+
+      document.getElementById('wallet-output').textContent = 
+        'Balance Updated:\n' + JSON.stringify(w, null, 2);
+    }
+
+    function testTransaction() {
+      const wallet = PewpiShared.getModule('WalletUnified');
+      if (!wallet || !testWalletId) {
+        document.getElementById('wallet-output').textContent = 'Create a wallet first';
+        return;
+      }
+
+      wallet.recordTransaction(testWalletId, {
+        type: 'transfer',
+        amount: 0.5,
+        from: '0xabc...',
+        to: '0xdef...',
+        hash: '0x123...'
+      });
+
+      const w = wallet.getWallet(testWalletId);
+      document.getElementById('wallet-output').textContent = 
+        'Transaction Added:\n' + JSON.stringify(w.transactions[0], null, 2);
+    }
+
+    function testListener() {
+      const listener = PewpiShared.getModule('IntegrationListener');
+      if (!listener) {
+        document.getElementById('listener-output').textContent = 'IntegrationListener not loaded';
+        return;
+      }
+
+      listener.on('demo.event', (event) => {
+        document.getElementById('listener-output').textContent = 
+          'Event Received:\n' + JSON.stringify(event, null, 2);
+      });
+
+      document.getElementById('listener-output').textContent = 'Listener registered for "demo.event"';
+    }
+
+    function emitEvent() {
+      const listener = PewpiShared.getModule('IntegrationListener');
+      if (!listener) return;
+
+      listener.emit('demo.event', { message: 'Hello from demo!', timestamp: Date.now() });
+    }
+
+    function testMachine() {
+      const adapter = PewpiShared.getModule('MachineAdapter');
+      if (!adapter) {
+        document.getElementById('machine-output').textContent = 'MachineAdapter not loaded';
+        return;
+      }
+
+      adapter.registerMachine('demo-machine', {
+        initialState: 'idle',
+        transitions: {
+          idle: { START: 'running' },
+          running: { STOP: 'idle', COMPLETE: 'done' },
+          done: { RESET: 'idle' }
+        }
+      });
+
+      const state = adapter.getState('demo-machine');
+      document.getElementById('machine-output').textContent = 
+        'Machine Created:\nCurrent State: ' + state;
+    }
+
+    function sendMachineEvent() {
+      const adapter = PewpiShared.getModule('MachineAdapter');
+      if (!adapter) return;
+
+      const currentState = adapter.getState('demo-machine');
+      const event = currentState === 'idle' ? 'START' : 'STOP';
+      
+      const result = adapter.send('demo-machine', event);
+      document.getElementById('machine-output').textContent = 
+        'Transition Result:\n' + JSON.stringify(result, null, 2);
+    }
+
+    function testNotification() {
+      const notification = PewpiShared.getModule('UINotification');
+      if (!notification) {
+        document.getElementById('ui-output').textContent = 'UINotification not loaded';
+        return;
+      }
+
+      const types = ['info', 'success', 'warning', 'error'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      
+      notification[type](`This is a ${type} notification!`);
+      document.getElementById('ui-output').textContent = 
+        'Notification shown:\nType: ' + type;
+    }
+
+    async function testModal() {
+      const modal = PewpiShared.getModule('UIModal');
+      if (!modal) {
+        document.getElementById('ui-output').textContent = 'UIModal not loaded';
+        return;
+      }
+
+      const confirmed = await modal.confirm('Do you want to test the modal?', {
+        title: 'Test Modal',
+        confirmText: 'Yes!',
+        cancelText: 'No'
+      });
+
+      document.getElementById('ui-output').textContent = 
+        'Modal Result:\nUser confirmed: ' + confirmed;
+    }
+  </script>
+</body>
+</html>
